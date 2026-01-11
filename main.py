@@ -1,10 +1,11 @@
 '''
 Author: wlaten
 Date: 2026-01-10 15:24:29
-LastEditTime: 2026-01-11 19:04:54
+LastEditTime: 2026-01-11 20:34:16
 Discription: file content
 '''
 import os, dotenv, time
+import json
 import requests
 import logging
 import execjs
@@ -153,6 +154,19 @@ class JWClient:
         """
         获取成绩报告
         
+        返回：
+        {
+            "total_credits": float,    # 总学分，返回这个是为了快速比较成绩是否有更新
+            "courses": [
+                {
+                    "course_name": str,
+                    "course_credits": float,
+                    "course_grade": str
+                },
+                ...
+            ]
+        }
+        
         # todo 暂时还没有错误处理逻辑
         """
         
@@ -162,21 +176,22 @@ class JWClient:
                                 params={"appId": "6925823576580372"},
                                 allow_redirects=True)
         referer = app_resp.url  # 获取重定向后的 URL 作为 Referer
+        common_headers = {
+            "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+            "X-Requested-With": "XMLHttpRequest",
+            "Origin": "https://jw.xmu.edu.cn",
+            "Referer": referer
+        }
         
         logger.info("获取证明列表...")
         cert_list_resp = self._request("POST",
                                        "https://jw.xmu.edu.cn/jwapp/sys/zmsqxmu/modules/xszmsq/dsqzmcx.do",
-                                       headers={
-                                           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                                           "X-Requested-With": "XMLHttpRequest",
-                                           "Origin": "https://jw.xmu.edu.cn",
-                                           "Referer": referer
-                                        },
-                                        data={
-                                            "*order": "+WID",
-                                            "pageSize": "200",
-                                            "pageNumber": "1"
-                                        })
+                                       headers=common_headers,
+                                       data={
+                                           "*order": "+WID",
+                                           "pageSize": "200",
+                                           "pageNumber": "1"
+                                       })
         cert_data = cert_list_resp.json()
         
         certificates = cert_data.get("datas", {}).get("dsqzmcx", {}).get("rows", [])
@@ -196,12 +211,7 @@ class JWClient:
         logger.info("查询证明信息...")
         zm_resp = self._request("POST",
                                 "https://jw.xmu.edu.cn/jwapp/sys/zmsqxmu/xszmsq/queryZmxx.do",
-                                headers={
-                                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
-                                    "X-Requested-With": "XMLHttpRequest",
-                                    "Origin": "https://jw.xmu.edu.cn",
-                                    "Referer": referer
-                                },
+                                headers=common_headers,
                                 data={"wid": wid_cert})
         
         zm_data = zm_resp.json()
@@ -222,11 +232,7 @@ class JWClient:
         
         report_resp = self._request("POST",
                                     "https://jw.xmu.edu.cn/jwapp/sys/frReport2/show.do",
-                                    headers={
-                                        "Content-Type": "application/x-www-form-urlencoded",
-                                        "Origin": "https://jw.xmu.edu.cn",
-                                        "Referer": referer
-                                    },
+                                    headers=common_headers,
                                     data={
                                         "wid": wid_report,
                                         "reportlet": f"zmsqxmu/{name_report}"
@@ -244,6 +250,11 @@ class JWClient:
         logger.info(f"获取到session_id: {session_id}")
         
         page_num = 1
+        total_pages = None
+        
+        total_credits = None    # 不设置成0是因为直接抓成绩单的，不是累加的
+        courses = []
+        
         while True:
             logger.info(f"正在获取第 {page_num} 页...")
             
@@ -256,14 +267,69 @@ class JWClient:
                                           "sessionID": session_id,
                                           "pn": page_num})
             
-            with open(f"cache/report_page_{page_num}.html", "w", encoding="utf-8") as f:
-                f.write(page_resp.text)
-        
-        
-            input(f"当前 {page_num} 页已保存，按回车继续...")
+            # with open(f"cache/report_page_{page_num}.html", "w", encoding="utf-8") as f:
+            #     f.write(page_resp.text)
+            # input(f"当前 {page_num} 页已保存，按回车继续...")
+            
+            if total_pages is None:
+                m = re.search(r"reportTotalPage\s*=\s*([0-9]+)", page_resp.text)
+                if m:
+                    total_pages = int(m.group(1))
+            
+            total_credits_match = re.search(r"已获学分：([\d.]+)", page_resp.text)
+            if total_credits_match:
+                total_credits = float(total_credits_match.group(1))
+            
+            courses.extend(self._parse_course_page(page_resp.text))
+            logger.info(f"解析第 {page_num} 页完成，当前已获取 {len(courses)} 门课程")
             
             page_num += 1
+            if total_pages and page_num > total_pages:
+                break
+            
+            if page_num > 10:    # todo 极端情况，防止死循环
+                pass
         
+        return {
+            "total_credits": total_credits,
+            "courses": courses
+        }
+    
+    def _parse_course_page(self, html: str) -> list[dict]:
+        """
+        解析一页课程成绩，返回课程列表
+        """
+        soup = BeautifulSoup(html, "lxml")
+        courses = []
+        
+        for tr in soup.find_all("tr"):
+            style = tr.get("style", "")
+            if "display:none" in style:
+                continue
+            
+            cells = {td["id"][0]: td.get_text(strip=True) for td in tr.find_all("td") if td.get("id")}
+            
+            if cells.get("A") and cells.get("D") and cells.get("E"):
+                try:
+                    courses.append({
+                        "course_name": cells["A"],
+                        "course_credits": float(cells["D"]),
+                        "course_grade": cells["E"]  # 这个可能是免修或者合格
+                    })
+                except ValueError:
+                    pass  # 可能是其他内容，不是成绩
+            
+            if cells.get("F") and cells.get("K") and cells.get("L"):
+                try:
+                    courses.append({
+                        "course_name": cells["F"],
+                        "course_credits": float(cells["K"]),
+                        "course_grade": cells["L"]
+                    })
+                except ValueError:
+                    pass
+                
+        return courses
 
 if __name__ == "__main__":
     client = JWClient(request_interval=request_interval)
@@ -273,4 +339,18 @@ if __name__ == "__main__":
     else:
         logger.error(f"登录失败: {message}")
     
-    client.get_grade_report()
+    report = client.get_grade_report()
+    with open("cache/grade_report.json", "w", encoding="utf-8") as f:
+        json.dump(report, f, ensure_ascii=False, indent=4)
+    
+    # with open("cache/grade_report.json", "r", encoding="utf-8") as f:
+    #     report = json.load(f)
+    
+    print(f"总学分: {report['total_credits']}")
+    
+    sum = 0
+    for course in report['courses']:
+        if course['course_grade'] not in ['免修']:
+            sum += course['course_credits']
+    
+    print(f"课程数: {len(report['courses'])}, 学分和: {sum}")
