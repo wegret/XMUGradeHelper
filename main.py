@@ -1,7 +1,7 @@
 '''
 Author: wlaten
 Date: 2026-01-10 15:24:29
-LastEditTime: 2026-01-10 17:10:25
+LastEditTime: 2026-01-11 19:04:54
 Discription: file content
 '''
 import os, dotenv, time
@@ -9,6 +9,7 @@ import requests
 import logging
 import execjs
 import re
+from bs4 import BeautifulSoup
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
@@ -17,7 +18,9 @@ dotenv.load_dotenv()
 
 username = os.getenv("XMU_USERNAME")
 password = os.getenv("XMU_PASSWORD")
-request_interval = int(os.getenv("REQUEST_INTERVAL", 1))    # 请求间隔，单位秒
+request_interval = int(os.getenv("REQUEST_INTERVAL", 0.75))    # 请求间隔，单位秒
+
+os.makedirs("cache", exist_ok=True)
 
 class JWClient:
     def __init__(self, request_interval: int = 1):
@@ -25,7 +28,7 @@ class JWClient:
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
         })  # todo 随机UA
-        self.js_path = "cache/encrypt.js"
+        # self.js_path = "cache/encrypt.js"
         
         self.last_request_time = 0
         self.request_interval = request_interval
@@ -34,6 +37,7 @@ class JWClient:
                  method: str,
                  url: str,
                  max_retries: int = 3,
+                 headers: dict = None,
                  **kwargs) -> requests.Response:
         """
         带重试机制的底层请求封装
@@ -42,6 +46,11 @@ class JWClient:
         """
         kwargs.setdefault('timeout', 10)
         last_exception = None
+        
+        if headers:
+            if 'headers' not in kwargs:
+                kwargs['headers'] = {}
+            kwargs['headers'].update(headers)
         
         for attempt in range(max_retries):
             try:
@@ -139,6 +148,122 @@ class JWClient:
             logger.error(f"检查登录状态时发生错误: {str(e)}")
         
         return False
+    
+    def get_grade_report(self):
+        """
+        获取成绩报告
+        
+        # todo 暂时还没有错误处理逻辑
+        """
+        
+        logger.info("获取应用入口...")
+        app_resp = self._request("GET",
+                                "https://jw.xmu.edu.cn/appShow",
+                                params={"appId": "6925823576580372"},
+                                allow_redirects=True)
+        referer = app_resp.url  # 获取重定向后的 URL 作为 Referer
+        
+        logger.info("获取证明列表...")
+        cert_list_resp = self._request("POST",
+                                       "https://jw.xmu.edu.cn/jwapp/sys/zmsqxmu/modules/xszmsq/dsqzmcx.do",
+                                       headers={
+                                           "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                                           "X-Requested-With": "XMLHttpRequest",
+                                           "Origin": "https://jw.xmu.edu.cn",
+                                           "Referer": referer
+                                        },
+                                        data={
+                                            "*order": "+WID",
+                                            "pageSize": "200",
+                                            "pageNumber": "1"
+                                        })
+        cert_data = cert_list_resp.json()
+        
+        certificates = cert_data.get("datas", {}).get("dsqzmcx", {}).get("rows", [])
+        wid_cert = None
+        name_cert = None
+        for cert in certificates:
+            name = cert.get("ZMWJMC", "")
+            if "本科生主修成绩单" in name and "中文" in name:
+                wid_cert = cert.get("WID")
+                name_cert = name
+                logger.info(f"找到成绩单证明: {name_cert} (WID: {wid_cert})")
+                break
+        
+        if not wid_cert:
+            pass
+        
+        logger.info("查询证明信息...")
+        zm_resp = self._request("POST",
+                                "https://jw.xmu.edu.cn/jwapp/sys/zmsqxmu/xszmsq/queryZmxx.do",
+                                headers={
+                                    "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8",
+                                    "X-Requested-With": "XMLHttpRequest",
+                                    "Origin": "https://jw.xmu.edu.cn",
+                                    "Referer": referer
+                                },
+                                data={"wid": wid_cert})
+        
+        zm_data = zm_resp.json()
+        
+        # with open("cache/zm.json", "w", encoding="utf-8") as f:
+        #     f.write(zm_resp.text)
+        # input("成绩单信息已保存到 cache/zm.json，按回车继续...")
+        
+        if "wid" not in zm_data:
+            pass
+        
+        wid_report = zm_data.get("wid")
+        name_report = zm_data.get("mb")
+        
+        logger.info(f"获取到报表信息 wid: {wid_report}, 报表名: {name_report}")
+        
+        logger.info("生成成绩报告...")
+        
+        report_resp = self._request("POST",
+                                    "https://jw.xmu.edu.cn/jwapp/sys/frReport2/show.do",
+                                    headers={
+                                        "Content-Type": "application/x-www-form-urlencoded",
+                                        "Origin": "https://jw.xmu.edu.cn",
+                                        "Referer": referer
+                                    },
+                                    data={
+                                        "wid": wid_report,
+                                        "reportlet": f"zmsqxmu/{name_report}"
+                                    })
+        
+        # with open("cache/grade_report.html", "w", encoding="utf-8") as f:
+        #     f.write(report_resp.text)
+        
+        session_match = re.search(r"currentSessionID\s*=\s*['\"](\d+)['\"]", 
+                                    report_resp.text)
+        if not session_match:
+            pass
+        
+        session_id = session_match.group(1)
+        logger.info(f"获取到session_id: {session_id}")
+        
+        page_num = 1
+        while True:
+            logger.info(f"正在获取第 {page_num} 页...")
+            
+            page_resp = self._request("GET",
+                                      "https://jw.xmu.edu.cn/jwapp/sys/frReport2/show.do",
+                                      params={
+                                          "_": str(int(time.time() * 1000)),
+                                          "__boxModel__": "true",
+                                          "op": "page_content",
+                                          "sessionID": session_id,
+                                          "pn": page_num})
+            
+            with open(f"cache/report_page_{page_num}.html", "w", encoding="utf-8") as f:
+                f.write(page_resp.text)
+        
+        
+            input(f"当前 {page_num} 页已保存，按回车继续...")
+            
+            page_num += 1
+        
 
 if __name__ == "__main__":
     client = JWClient(request_interval=request_interval)
@@ -148,7 +273,4 @@ if __name__ == "__main__":
     else:
         logger.error(f"登录失败: {message}")
     
-    if client.is_logged_in():
-        logger.info("当前处于登录状态。")
-    else:
-        logger.info("当前未登录。")
+    client.get_grade_report()
