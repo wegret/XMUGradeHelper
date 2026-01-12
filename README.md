@@ -82,3 +82,29 @@ QQ邮箱，进入设置-账号与安全。找到一个`POP3/IMAP/SMTP/Exchange/C
 
 然后这个就启动了，等着接收你的好成绩吧。
 
+### （时间设置）
+
+当前设置的是30分钟运行一次，经过精确的计算，是不会超过github actions的免费额度的。
+
+<details>
+  <summary><span style="font-weight: 700;"><u>精确的计算</u></span></summary>
+
+<blockquote>
+
+一个任务运行不会超过1分钟，私有仓库每月有2000分钟免费额度。
+
+</blockquote>
+
+</details>
+
+如果你需要更改运行时间，可以修改`.github/workflows/check.yml`中的`cron`配置。
+
+```yml
+name: 检查成绩更新
+
+on:
+  schedule:
+    - cron: '0,30 * * * *'  # 每30分钟运行一次
+    # - cron: '0 * * * *'   # 每1小时
+    # - cron: '0 */3 * * *' # 每3个小时
+```
