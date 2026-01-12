@@ -1,0 +1,54 @@
+name: 检查成绩更新
+
+on:
+  schedule:
+    - cron: '0,30 * * * *'  # 每30分钟运行一次
+    # - cron: '0 * * * *'   # 每1小时
+    # - cron: '0 */3 * * *' # 每3个小时
+    
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  check-grades:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 检出代码
+      uses: actions/checkout@v4
+    
+    - name: 设置 Python 环境
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: 安装依赖
+      run: |
+        pip install -r requirements.txt
+    
+    - name: 恢复成绩缓存
+      uses: actions/cache@v4
+      with:
+        path: cache/
+        key: grades-${{ github.run_id }}
+        restore-keys: |
+          grades-
+    
+    - name: 运行成绩检查
+      env:
+        XMU_USERNAME: ${{ secrets.XMU_USERNAME }}
+        XMU_PASSWORD: ${{ secrets.XMU_PASSWORD }}
+        REQUEST_INTERVAL: ${{ secrets.REQUEST_INTERVAL || '0.75' }}
+        
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_REPOSITORY: ${{ github.repository }}
+        
+        EMAIL_HOST: ${{ secrets.EMAIL_HOST }}
+        EMAIL_PORT: ${{ secrets.EMAIL_PORT }}
+        EMAIL_USER: ${{ secrets.EMAIL_USER }}
+        EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
+        EMAIL_TO: ${{ secrets.EMAIL_TO }}
+      run: python main.py
