@@ -1,7 +1,7 @@
 '''
 Author: wlaten
 Date: 2026-01-12 15:54:46
-LastEditTime: 2026-01-12 16:34:52
+LastEditTime: 2026-01-12 17:29:44
 Discription: file content
 '''
 import os
@@ -27,7 +27,7 @@ def send_github_issue(title, content) -> bool:
         repo = os.getenv("GITHUB_REPOSITORY")
         
         if not token or not repo:
-            logging.error("这是github环境吗就跑这个？？？")
+            logger.debug("这是github环境吗就跑这个？？？")
             return False
         
         url = f"https://api.github.com/repos/{repo}/issues"
@@ -86,7 +86,7 @@ def send_email(title, content) -> bool:
         return True
         
     except Exception as e:
-        logging.error(f"邮件通知发送失败: {e}")
+        logger.debug(f"邮件通知发送失败: {e}")
         return False
     
 if __name__ == "__main__":
