@@ -15,7 +15,11 @@ from bs4 import BeautifulSoup
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-dotenv.load_dotenv()
+try:
+    import dotenv
+    dotenv.load_dotenv()
+except ImportError:
+    pass
 
 username = os.getenv("XMU_USERNAME")
 password = os.getenv("XMU_PASSWORD")
@@ -312,9 +316,9 @@ class JWClient:
             if cells.get("A") and cells.get("D") and cells.get("E"):
                 try:
                     courses.append({
-                        "course_name": cells["A"],
+                        "course_name": cells["A"].strip(),
                         "course_credits": float(cells["D"]),
-                        "course_grade": cells["E"]  # 这个可能是免修或者合格
+                        "course_grade": cells["E"].strip()  # 这个可能是免修或者合格
                     })
                 except ValueError:
                     pass  # 可能是其他内容，不是成绩
@@ -322,9 +326,9 @@ class JWClient:
             if cells.get("F") and cells.get("K") and cells.get("L"):
                 try:
                     courses.append({
-                        "course_name": cells["F"],
+                        "course_name": cells["F"].strip(),
                         "course_credits": float(cells["K"]),
-                        "course_grade": cells["L"]
+                        "course_grade": cells["L"].strip()
                     })
                 except ValueError:
                     pass
@@ -353,4 +357,4 @@ if __name__ == "__main__":
         if course['course_grade'] not in ['免修']:
             sum += course['course_credits']
     
-    print(f"课程数: {len(report['courses'])}, 学分和: {sum}")
+    print(f"课程数: {len(report['courses'])}, 学分和: {sum}")   # ? 这里不一样是教务系统固有问题，我测试的时候数过了，最后统计出来的就是不一样
