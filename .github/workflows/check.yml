@@ -39,6 +39,9 @@ jobs:
     
     - name: 运行成绩检查
       env:
+        CONFIG_JSON: ${{ secrets.CONFIG_JSON }} # 当前其实只需要这一个
+
+        # --------------- 下面是兼容版本一的 ----------------
         XMU_USERNAME: ${{ secrets.XMU_USERNAME }}
         XMU_PASSWORD: ${{ secrets.XMU_PASSWORD }}
         REQUEST_INTERVAL: ${{ secrets.REQUEST_INTERVAL || '0.75' }}
