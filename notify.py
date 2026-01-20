@@ -1,7 +1,7 @@
 '''
 Author: wlaten
 Date: 2026-01-12 15:54:46
-LastEditTime: 2026-01-12 17:29:44
+LastEditTime: 2026-01-20 17:11:36
 Discription: file content
 '''
 import os
@@ -9,22 +9,17 @@ import logging
 import requests
 from email.mime.text import MIMEText
 import smtplib
+from config import get_config
 
 logger = logging.getLogger(__name__)
-
-try:
-    import dotenv
-    dotenv.load_dotenv()
-except ImportError:
-    pass
 
 def send_github_issue(title, content) -> bool:
     """
     发送 GitHub Issue 通知（这个不需要配置）
     """
     try:
-        token = os.getenv("GITHUB_TOKEN")
-        repo = os.getenv("GITHUB_REPOSITORY")
+        token = get_config("GITHUB_TOKEN")
+        repo = get_config("GITHUB_REPOSITORY")
         
         if not token or not repo:
             logger.debug("这是github环境吗就跑这个？？？")
@@ -59,15 +54,15 @@ def send_email(title, content) -> bool:
                     "EMAIL_USER", 
                     "EMAIL_PASSWORD", 
                     "EMAIL_TO"]
-        if not all(os.getenv(k) for k in required):
+        if not all(get_config(k, None) for k in required):
             logger.error("邮件通知未配置完整，跳过发送")
             return False    # 没配置邮箱
         
-        host = os.getenv("EMAIL_HOST")
-        port = int(os.getenv("EMAIL_PORT"))
-        user = os.getenv("EMAIL_USER")
-        password = os.getenv("EMAIL_PASSWORD")
-        addr = os.getenv("EMAIL_TO")
+        host = get_config("EMAIL_HOST")
+        port = int(get_config("EMAIL_PORT"))
+        user = get_config("EMAIL_USER")
+        password = get_config("EMAIL_PASSWORD")
+        addr = get_config("EMAIL_TO")
         
         msg = MIMEText(content.replace('\n', '<br>'), 'html', 'utf-8')
         msg["Subject"] = title

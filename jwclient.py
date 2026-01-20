@@ -1,29 +1,24 @@
 '''
 Author: wlaten
 Date: 2026-01-10 15:24:29
-LastEditTime: 2026-01-12 16:31:16
+LastEditTime: 2026-01-20 17:21:44
 Discription: file content
 '''
-import os, dotenv, time
+import os, time
 import json
 import requests
 import logging
 import execjs
 import re
 from bs4 import BeautifulSoup
+from config import get_config
 
 logger = logging.getLogger(__name__)
-
-try:
-    import dotenv
-    dotenv.load_dotenv()
-except ImportError:
-    pass
 
 os.makedirs("cache", exist_ok=True)
 
 class JWClient:
-    def __init__(self, request_interval: int = 1):
+    def __init__(self, request_interval: float = 1):
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
@@ -127,7 +122,7 @@ class JWClient:
         except requests.RequestException as e:
             if isinstance(e, requests.HTTPError) and e.response.status_code == 401:
                 return False, "账号或密码错误"
-            return False, f"网络请求发生错误: {str(e)}"
+            return False, f"网络请求发生错误: {str(e)}" # ! 这里大概率是学校破网站挂了。
         except AttributeError:
             return False, "解析页面参数失败，学校可能更新了登录页"
         except Exception as e:
@@ -333,9 +328,9 @@ class JWClient:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     
-    username = os.getenv("XMU_USERNAME")
-    password = os.getenv("XMU_PASSWORD")
-    request_interval = int(os.getenv("REQUEST_INTERVAL", 0.75))    # 请求间隔，单位秒
+    username = get_config("XMU_USERNAME")
+    password = get_config("XMU_PASSWORD")
+    request_interval = float(get_config("REQUEST_INTERVAL", 0.75))    # 请求间隔，单位秒
     
     client = JWClient(request_interval=request_interval)
     success, message = client.login(username, password)
