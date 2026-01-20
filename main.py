@@ -1,7 +1,7 @@
 '''
 Author: wlaten
 Date: 2026-01-12 17:30:43
-LastEditTime: 2026-01-20 18:04:55
+LastEditTime: 2026-01-20 18:10:06
 Discription: file content
 '''
 import logging
@@ -133,9 +133,11 @@ def main():
         courses_newest = report.get("courses", [])[-10:] # 抓取最新10门课程来测试
         
         title = "XMU成绩监视器首次运行成功"
+        
         content = "已获取当前成绩报告。\n 最新几门课程成绩：\n" + "\n".join([f"- {c['course_name']}: {c['course_grade']}" for c in courses_newest])
         
-        send_notification(title, content, all=True) # 首次运行强制发送所有通知渠道
+        # send_notification(title, content, all=True) # 首次运行强制发送所有通知渠道
+        send_notification(title, content) # 保护隐私
         
         save_report(report)
         logger.info("首次运行，已保存当前成绩报告。")
