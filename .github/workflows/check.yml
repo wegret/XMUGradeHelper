@@ -11,6 +11,7 @@ on:
 permissions:
   issues: write
   contents: read
+  actions: write
 
 jobs:
   check-grades:
@@ -55,3 +56,11 @@ jobs:
         EMAIL_PASSWORD: ${{ secrets.EMAIL_PASSWORD }}
         EMAIL_TO: ${{ secrets.EMAIL_TO }}
       run: python main.py
+    
+    - name: 清理旧缓存
+      if: success() # 只有脚本运行成功才清理，防止程序报错导致丢数据
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        REPO: ${{ github.repository }}
+      run: |
+        gh cache delete --all --repo $REPO || true
