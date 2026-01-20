@@ -1,7 +1,7 @@
 '''
 Author: wlaten
 Date: 2026-01-12 17:30:43
-LastEditTime: 2026-01-20 17:00:27
+LastEditTime: 2026-01-20 17:52:59
 Discription: file content
 '''
 import logging
@@ -39,6 +39,30 @@ def save_report(report) -> bool:
         logger.error(f"保存成绩报告失败: {e}")
         return False
 
+logs_file = "cache/record.json"
+
+def load_logs():  # 运行记录，比如错误次数
+    record = {}
+    if not os.path.exists(logs_file):
+        record = {
+            "network_error_cnt": 0  # 目前就记录这一个，连续错误次数
+        }
+        with open(logs_file, "w", encoding="utf-8") as f:
+            json.dump(record, f, ensure_ascii=False, indent=4)
+    else:
+        with open(logs_file, "r", encoding="utf-8") as f:
+            record = json.load(f)
+    return record
+
+def save_logs(record) -> bool:
+    try:
+        with open(logs_file, "w", encoding="utf-8") as f:
+            json.dump(record, f, ensure_ascii=False, indent=4)
+        return True
+    except Exception as e:
+        logger.error(f"保存运行记录失败: {e}")
+        return False
+
 def compare_reports(report_old, report_new):
     """
     比较新旧成绩报告
@@ -72,11 +96,25 @@ def main():
         return 1
     
     client = JWClient(request_interval=request_interval)
+    
+    run_logs = load_logs()
     success, message = client.login(username, password)
     
     if not success:
-        logger.error(f"登录失败: {message}")
+        if message.startswith("网络请求发生错误"):
+            run_logs["network_error_cnt"] = run_logs.get("network_error_cnt", 0) + 1
+            save_logs(run_logs)
+            logger.error(f"登录失败（连续错误次数 {run_logs['network_error_cnt']}）: {message}")
+            error_alarm_threshold = int(get_config("NETWORK_ERROR_THRESHOLD", 5))
+            if run_logs["network_error_cnt"] < error_alarm_threshold:
+                return 0    # ! 错够多次后再报警（网络问题很正常）
+            # 不清空错误次数，报错一次就够了
+        else:
+            logger.error(f"登录失败: {message}")
         return 1
+    else:
+        run_logs["network_error_cnt"] = 0
+        save_logs(run_logs)
     
     logger.info("登录成功，正在获取成绩报告...")
     

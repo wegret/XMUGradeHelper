@@ -1,7 +1,7 @@
 '''
 Author: wlaten
 Date: 2026-01-10 15:24:29
-LastEditTime: 2026-01-20 16:59:19
+LastEditTime: 2026-01-20 17:21:44
 Discription: file content
 '''
 import os, time
@@ -122,7 +122,7 @@ class JWClient:
         except requests.RequestException as e:
             if isinstance(e, requests.HTTPError) and e.response.status_code == 401:
                 return False, "账号或密码错误"
-            return False, f"网络请求发生错误: {str(e)}"
+            return False, f"网络请求发生错误: {str(e)}" # ! 这里大概率是学校破网站挂了。
         except AttributeError:
             return False, "解析页面参数失败，学校可能更新了登录页"
         except Exception as e:
