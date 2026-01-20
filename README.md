@@ -2,11 +2,13 @@
 
 （配置成qq邮箱后就可以直接用手机qq接受提醒。）
 
-（啥也不配置的话，github app可以接收提醒）
-
 部署后效果如下：
 
 <img src="https://wegret-pic.oss-cn-beijing.aliyuncs.com/image-20260112200443282.png" alt="image-20260112200443282" style="zoom: 33%;" />
+
+**更新：**
+
+2026.01.20：修改默认不会用github issues通知。增加JSON配置方式。
 
 ## 傻瓜配置方式
 
@@ -28,28 +30,29 @@
 
 <img src="https://wegret-pic.oss-cn-beijing.aliyuncs.com/image-20260112201621337.png" alt="image-20260112201621337" style="zoom:50%;" />
 
-然后这里输入配置，首先输入学号，`Name`这里输入`XMU_USERNAME`，`Secret`填入学号。
+然后这里输入配置：
 
-<img src="https://wegret-pic.oss-cn-beijing.aliyuncs.com/image-20260112202331574.png" alt="image-20260112202331574" style="zoom:50%;" />
+<img src="https://wegret-pic.oss-cn-beijing.aliyuncs.com/image-20260120182046158.png" alt="image-20260120182046158" style="zoom:50%;" />
 
-除了学号外，还需要配置厦大账号密码、邮箱配置等。这是一个示例的`.env`文件：
+首先输入学号，`Name`这里输入`CONFIG_JSON`，`Secret`填入以下的信息，最后点`Add Secret`。
 
-```bash
-# 必填的（没有这个怎么查成绩？）
-XMU_USERNAME=<学号>
-XMU_PASSWORD=<密码>
+```json
+{
+    "XMU_USERNAME": "<学号>",
+    "XMU_PASSWORD": "<密码>",
+    "EMAIL_HOST": "smtp.qq.com",
+    "EMAIL_PORT": 465,
+    "EMAIL_USER": "<发件qq邮箱>",
+    "EMAIL_PASSWORD": "<授权码>",
+    "EMAIL_TO": "<收信邮箱>",
+    "REQUEST_INTERVAL": 0.75
+}
 
-# 可选的（设置了qq邮箱后）
-EMAIL_HOST=smtp.qq.com	 # qq邮箱的话不用该
-EMAIL_PORT=465			# qq邮箱的话不用改
-EMAIL_USER=<发件qq邮箱>
-EMAIL_PASSWORD=<授权码>
-EMAIL_TO=<收信邮箱>
 ```
 
-如上，总而言之，需要配置`XMU_USERNAME`、`XMU_PASSWORD`两个必填的secret。
+其中配置信息，学号密码就是厦大统一身份认证。如果使用qq邮箱的话，只需要额外再填写`EMAIL_USER`、`EMAIL_PASSWORD`、`EMAIL_TO`三个就行了（也就是说，qq邮箱的话`EMAIL_HOST`、`EMAIL_PORT`不用改。）
 
-和可选的`EMAIL_HOST`、`EMAIL_PORT`、`EMAIL_USER`、`EMAIL_PASSWORD`、`EMAIL_TO`五个可选的secret。
+
 
 <details>
   <summary><span style="font-weight: 700;"><u>什么，你还不会配置邮箱授权码？（点击展开）</u></span></summary>
@@ -68,7 +71,7 @@ QQ邮箱，进入设置-账号与安全。找到一个`POP3/IMAP/SMTP/Exchange/C
 
 总之，那一堆secret，配置完成后如下：
 
-<img src="https://wegret-pic.oss-cn-beijing.aliyuncs.com/image-20260112184418251.png" alt="image-20260112184418251" style="zoom:50%;" />
+<img src="https://wegret-pic.oss-cn-beijing.aliyuncs.com/image-20260120182847008.png" alt="image-20260120182847008" style="zoom:50%;" />
 
 ### 3. actions启动！
 
