@@ -1,7 +1,7 @@
 '''
 Author: wlaten
 Date: 2026-01-20 16:29:44
-LastEditTime: 2026-01-20 17:03:37
+LastEditTime: 2026-01-20 18:31:21
 Discription: file content
 '''
 
@@ -23,6 +23,8 @@ if _raw_cfg:
         _cfg = json.loads(_raw_cfg)
     except Exception as e:
         logger.error(f"解析 CONFIG_JSON 失败: {e} （JSON 配置错误？）")
+else:
+    logger.warning("未检测到 CONFIG_JSON 环境变量")
 
 def get_config(item: str, default=None):    # ! 返回什么类型都可以，返回后一定要主动类型转换
     val = os.getenv(item)   # 兼容第一版代码，两种配置方式都可以

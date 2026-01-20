@@ -1,17 +1,18 @@
 '''
 Author: wlaten
 Date: 2026-01-12 17:30:43
-LastEditTime: 2026-01-20 18:10:06
+LastEditTime: 2026-01-20 18:41:22
 Discription: file content
 '''
 import logging
-from config import get_config
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+from config import get_config
 
 from jwclient import JWClient
 import notify
