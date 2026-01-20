@@ -1,7 +1,7 @@
 '''
 Author: wlaten
 Date: 2026-01-12 17:30:43
-LastEditTime: 2026-01-20 18:41:22
+LastEditTime: 2026-01-20 20:16:10
 Discription: file content
 '''
 import logging
@@ -122,8 +122,19 @@ def main():
     
     try:
         report = client.get_grade_report()
+        
+        run_logs["report_error_cnt"] = 0
+        save_logs(run_logs)
+        
         logger.info("成绩报告获取成功。")
     except Exception as e:
+        run_logs["report_error_cnt"] = run_logs.get("report_error_cnt", 0) + 1
+        save_logs(run_logs)
+        
+        if run_logs["report_error_cnt"] < 3:
+            logger.warning(f"获取成绩报告失败 (尝试 {run_logs['report_error_cnt']}/3): {e}")
+            return 0
+            
         logger.error(f"获取成绩报告失败: {e}")
         return 1
     

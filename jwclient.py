@@ -1,7 +1,7 @@
 '''
 Author: wlaten
 Date: 2026-01-10 15:24:29
-LastEditTime: 2026-01-20 17:21:44
+LastEditTime: 2026-01-20 20:16:57
 Discription: file content
 '''
 import os, time
@@ -200,7 +200,7 @@ class JWClient:
                 break
         
         if not wid_cert:
-            pass
+            raise Exception("未找到成绩单证明")
         
         logger.info("查询证明信息...")
         zm_resp = self._request("POST",
@@ -215,7 +215,7 @@ class JWClient:
         # input("成绩单信息已保存到 cache/zm.json，按回车继续...")
         
         if "wid" not in zm_data:
-            pass
+            raise Exception("查询证明详情失败，未返回WID")
         
         wid_report = zm_data.get("wid")
         name_report = zm_data.get("mb")
@@ -238,7 +238,7 @@ class JWClient:
         session_match = re.search(r"currentSessionID\s*=\s*['\"](\d+)['\"]", 
                                     report_resp.text)
         if not session_match:
-            pass
+            raise Exception("无法解析Session ID")
         
         session_id = session_match.group(1)
         logger.info(f"获取到session_id: {session_id}")
@@ -281,8 +281,9 @@ class JWClient:
             if total_pages and page_num > total_pages:
                 break
             
-            if page_num > 10:    # todo 极端情况，防止死循环
-                pass
+            if page_num > 10:    # tm的还真有这种情况
+                logger.warning("达到最大页数限制，强制停止分页查询")
+                raise Exception("分页查询超过最大页数限制")
         
         return {
             "total_credits": total_credits,
