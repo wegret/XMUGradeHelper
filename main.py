@@ -1,10 +1,11 @@
 '''
 Author: wlaten
 Date: 2026-01-12 17:30:43
-LastEditTime: 2026-01-12 20:46:40
+LastEditTime: 2026-01-20 17:00:27
 Discription: file content
 '''
 import logging
+from config import get_config
 
 logging.basicConfig(
     level=logging.INFO,
@@ -62,9 +63,9 @@ def send_notification(title, content):
 def main():
     logger.info("开始检查成绩更新...")
     
-    username = os.getenv("XMU_USERNAME")
-    password = os.getenv("XMU_PASSWORD")
-    request_interval = float(os.getenv("REQUEST_INTERVAL", "0.75"))
+    username = get_config("XMU_USERNAME")
+    password = get_config("XMU_PASSWORD")
+    request_interval = float(get_config("REQUEST_INTERVAL", 0.75))
     
     if not username or not password:
         logger.error("请设置环境变量 XMU_USERNAME 和 XMU_PASSWORD 以提供登录信息。")
@@ -117,9 +118,4 @@ def main():
     return 0
 
 if __name__ == "__main__":
-    try:
-        import dotenv
-        dotenv.load_dotenv()
-    except ImportError:
-        pass
     exit(main())

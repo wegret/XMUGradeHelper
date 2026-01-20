@@ -1,29 +1,24 @@
 '''
 Author: wlaten
 Date: 2026-01-10 15:24:29
-LastEditTime: 2026-01-12 16:31:16
+LastEditTime: 2026-01-20 16:59:19
 Discription: file content
 '''
-import os, dotenv, time
+import os, time
 import json
 import requests
 import logging
 import execjs
 import re
 from bs4 import BeautifulSoup
+from config import get_config
 
 logger = logging.getLogger(__name__)
-
-try:
-    import dotenv
-    dotenv.load_dotenv()
-except ImportError:
-    pass
 
 os.makedirs("cache", exist_ok=True)
 
 class JWClient:
-    def __init__(self, request_interval: int = 1):
+    def __init__(self, request_interval: float = 1):
         self.session = requests.Session()
         self.session.headers.update({
             'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.6 Mobile/15E148 Safari/604.1',
@@ -333,9 +328,9 @@ class JWClient:
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     
-    username = os.getenv("XMU_USERNAME")
-    password = os.getenv("XMU_PASSWORD")
-    request_interval = int(os.getenv("REQUEST_INTERVAL", 0.75))    # 请求间隔，单位秒
+    username = get_config("XMU_USERNAME")
+    password = get_config("XMU_PASSWORD")
+    request_interval = float(get_config("REQUEST_INTERVAL", 0.75))    # 请求间隔，单位秒
     
     client = JWClient(request_interval=request_interval)
     success, message = client.login(username, password)
