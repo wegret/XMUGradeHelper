@@ -1,7 +1,7 @@
 '''
 Author: wlaten
 Date: 2026-01-20 16:29:44
-LastEditTime: 2026-01-20 18:31:21
+LastEditTime: 2026-01-20 18:51:57
 Discription: file content
 '''
 
@@ -28,7 +28,7 @@ else:
 
 def get_config(item: str, default=None):    # ! 返回什么类型都可以，返回后一定要主动类型转换
     val = os.getenv(item)   # 兼容第一版代码，两种配置方式都可以
-    if val is not None:
+    if val is not None and val.strip() != "": 
         return val 
     if item in _cfg:
         return _cfg[item]
