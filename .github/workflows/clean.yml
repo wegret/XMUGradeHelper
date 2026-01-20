@@ -1,0 +1,23 @@
+name: 清除所有缓存
+
+on:
+  workflow_dispatch:
+
+permissions:
+  actions: write
+
+jobs:
+  clear-cache:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 检出代码
+        uses: actions/checkout@v4
+
+      - name: 清除所有缓存
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+        run: |
+          echo "开始清理缓存..."
+          gh cache delete --all --repo $REPO || echo "没有缓存可清除"
+          echo "清理完成"
