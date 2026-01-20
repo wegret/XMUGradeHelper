@@ -67,6 +67,23 @@ QQ邮箱，进入设置-账号与安全。找到一个`POP3/IMAP/SMTP/Exchange/C
 
 </details>
 
+现在默认是不启用github issues通知的，如果你想启用github issues通知的话，加入`NOTIFY_GITHUB_ISSUE_ENABLED`配置，值设置为`true`即可。
+
+例如下面的最后一行：
+
+```json
+{
+    "XMU_USERNAME": "<学号>",
+    "XMU_PASSWORD": "<密码>",
+    "EMAIL_HOST": "smtp.qq.com",
+    "EMAIL_PORT": 465,
+    "EMAIL_USER": "<发件qq邮箱>",
+    "EMAIL_PASSWORD": "<授权码>",
+    "EMAIL_TO": "<收信邮箱>",
+    "REQUEST_INTERVAL": 0.75,
+    "NOTIFY_GITHUB_ISSUE_ENABLED": true
+}
+```
 
 
 总之，那一堆secret，配置完成后如下：
