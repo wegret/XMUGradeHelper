@@ -1,7 +1,7 @@
 '''
 Author: wlaten
 Date: 2026-01-12 17:30:43
-LastEditTime: 2026-01-20 17:52:59
+LastEditTime: 2026-01-20 18:04:55
 Discription: file content
 '''
 import logging
@@ -80,8 +80,9 @@ def compare_reports(report_old, report_new):
     
     return updates
 
-def send_notification(title, content):
-    notify.send_github_issue(title, content)
+def send_notification(title, content, all=False):
+    if str(get_config("NOTIFY_GITHUB_ISSUE_ENABLED", "false")).lower() == "true" or all:
+        notify.send_github_issue(title, content)
     notify.send_email(title, content)
 
 def main():
@@ -134,7 +135,7 @@ def main():
         title = "XMU成绩监视器首次运行成功"
         content = "已获取当前成绩报告。\n 最新几门课程成绩：\n" + "\n".join([f"- {c['course_name']}: {c['course_grade']}" for c in courses_newest])
         
-        send_notification(title, content)
+        send_notification(title, content, all=True) # 首次运行强制发送所有通知渠道
         
         save_report(report)
         logger.info("首次运行，已保存当前成绩报告。")
